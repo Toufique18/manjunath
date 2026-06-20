@@ -2,12 +2,14 @@
 
 import { cookies } from "next/headers";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://20.215.236.82";
+
 export async function sendChatAction(text: string) {
     try {
         const cookieStore = await cookies();
         const cookieHeader = cookieStore.toString();
 
-        const res = await fetch("http://20.215.236.82/api/chat", {
+        const res = await fetch(`${BACKEND_URL}/api/chat`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

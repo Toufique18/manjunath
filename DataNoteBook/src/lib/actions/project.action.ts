@@ -2,6 +2,8 @@
 
 import { cookies } from "next/headers";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://20.215.236.82";
+
 async function getCookieHeader(): Promise<Record<string, string>> {
   try {
     const cookieStore = await cookies();
