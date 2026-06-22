@@ -6,15 +6,29 @@ const axiosInstance = {
     const data = await res.json();
     return { data };
   },
+  // post: async (url: string, body: any, config: any = {}) => {
+  //   const res = await fetch(url, {
+  //     method: "POST",
+  //     headers: config.headers || {},
+  //     body: JSON.stringify(body),
+  //   });
+  //   const data = await res.json();
+  //   return { data };
+  // }
   post: async (url: string, body: any, config: any = {}) => {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: config.headers || {},
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    return { data };
-  }
+  const contentType = config.headers?.['Content-Type'] || 'application/json';
+  const isFormEncoded = contentType.includes('application/x-www-form-urlencoded');
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: config.headers || { 'Content-Type': 'application/json' },
+    body: isFormEncoded
+      ? new URLSearchParams(body).toString() // ✅ correct encoding
+      : JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { data };
+},
 };
 
 interface PresignedUrlPayload {
@@ -125,6 +139,7 @@ const uploadLargeFileInChunks = async (
         method: 'PUT',
         headers: {
           'Content-Type': 'application/octet-stream',
+          'x-ms-blob-type': 'BlockBlob',
         },
         body: chunk,
       });

@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://20.215.236.82";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function getCookieHeader(): Promise<Record<string, string>> {
   try {
@@ -97,6 +97,8 @@ export async function registerFileAction(payload: any, token: string | null = nu
     });
     const data = await res.json();
     if (!res.ok) {
+      //const data = await res.json();
+      console.error("Server 400 detail:", JSON.stringify(data, null, 2));
       const errorDetail = data?.detail;
       let errorMsg = data?.message;
       if (!errorMsg && errorDetail) {

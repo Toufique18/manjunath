@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://20.215.236.82";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function sendChatAction(text: string) {
     try {
