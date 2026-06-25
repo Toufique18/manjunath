@@ -5,6 +5,7 @@ import {
   Plus, X, ArrowUp, Sparkles, MoreVertical, ThumbsUp, ThumbsDown,
   ChevronLeft, ChevronRight, Table, Loader2, AlertCircle, RefreshCw
 } from "lucide-react";
+import { loadPreviewAction } from "@/lib/actions/ai.action";
 
 interface Message {
   role: "user" | "ai";
@@ -95,7 +96,7 @@ export default function GeminiAssistant({
     }
   }, [sessionFilename, activeTab, sessionActive]);
 
-  // Load preview data
+  // Load preview data — runs via server action so session_id cookie is always forwarded
   const loadPreview = React.useCallback(async (page: number) => {
     if (!sessionActive) {
       setPreviewData(null);
@@ -105,25 +106,21 @@ export default function GeminiAssistant({
     setPreviewError(null);
     setPreviewSessionExpired(false);
     try {
-      const res = await fetch(`/api/upload/preview?page=${page}&page_size=${pageSize}`, {
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ detail: "Failed to load preview" }));
-        // 401 = no session cookie; 404 = session expired/not found
-        if (res.status === 401 || res.status === 404) {
+      const result = await loadPreviewAction(page, pageSize);
+      if (!result.ok) {
+        // 401/404 = session not found on backend
+        if (result.status === 401 || result.status === 404) {
           setPreviewSessionExpired(true);
           return;
         }
-        throw new Error(errData.detail || "Failed to load preview");
+        throw new Error(result.data?.detail || "Failed to load preview");
       }
-      const data = await res.json();
       setPreviewSessionExpired(false);
       setPreviewData({
-        columns: data.columns || [],
-        rows: data.rows || [],
-        totalRows: data.total_rows || 0,
-        filename: data.filename || "",
+        columns: result.data.columns || [],
+        rows: result.data.rows || [],
+        totalRows: result.data.total_rows || 0,
+        filename: result.data.filename || "",
       });
     } catch (err: any) {
       setPreviewError(err.message || "An error occurred");
@@ -140,9 +137,8 @@ export default function GeminiAssistant({
   }, [activeTab, sessionActive, previewPage, loadPreview]);
 
   return (
-    <aside className={`bg-[#0A1628] border-l border-slate-900/80 flex flex-col overflow-hidden flex-shrink-0 z-30 transition-all duration-300 ${
-      activeTab === "preview" ? "w-[550px]" : "w-[300px]"
-    }`}>
+    <aside className={`bg-[#0A1628] border-l border-slate-900/80 flex flex-col overflow-hidden flex-shrink-0 z-30 transition-all duration-300 ${activeTab === "preview" ? "w-[550px]" : "w-[300px]"
+      }`}>
       {/* ── Header ── */}
       <div className="h-11 border-b border-slate-900/80 flex items-center justify-between px-3 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -167,11 +163,10 @@ export default function GeminiAssistant({
           {showGeminiTab && (
             <button
               onClick={() => setActiveTab("gemini")}
-              className={`flex-1 py-2 px-3 text-center font-medium border-b-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === "gemini"
-                  ? "border-emerald-500 text-emerald-400 bg-slate-900/20"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
+              className={`flex-1 py-2 px-3 text-center font-medium border-b-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === "gemini"
+                ? "border-emerald-500 text-emerald-400 bg-slate-900/20"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
             >
               <span>Gemini</span>
               <span
@@ -189,11 +184,10 @@ export default function GeminiAssistant({
           {showPreviewTab && (
             <button
               onClick={() => setActiveTab("preview")}
-              className={`flex-1 py-2 px-3 text-center font-medium border-b-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeTab === "preview"
-                  ? "border-emerald-500 text-emerald-400 bg-slate-900/20"
-                  : "border-transparent text-slate-400 hover:text-slate-200"
-              }`}
+              className={`flex-1 py-2 px-3 text-center font-medium border-b-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === "preview"
+                ? "border-emerald-500 text-emerald-400 bg-slate-900/20"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
             >
               <span>Preview</span>
               <span
@@ -361,11 +355,10 @@ export default function GeminiAssistant({
                 <button
                   disabled={chatLoading || !chatInput.trim()}
                   onClick={handleSend}
-                  className={`h-7 w-7 rounded-full flex items-center justify-center transition-all ${
-                    chatInput.trim() && !chatLoading
-                      ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.25)]"
-                      : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-40"
-                  }`}
+                  className={`h-7 w-7 rounded-full flex items-center justify-center transition-all ${chatInput.trim() && !chatLoading
+                    ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.25)]"
+                    : "bg-slate-800 text-slate-600 cursor-not-allowed opacity-40"
+                    }`}
                 >
                   <ArrowUp className="h-3.5 w-3.5 stroke-[2.5]" />
                 </button>
@@ -481,8 +474,8 @@ export default function GeminiAssistant({
                                 val === null || val === undefined
                                   ? ""
                                   : typeof val === "object"
-                                  ? JSON.stringify(val)
-                                  : String(val);
+                                    ? JSON.stringify(val)
+                                    : String(val);
                               return (
                                 <td
                                   key={col}

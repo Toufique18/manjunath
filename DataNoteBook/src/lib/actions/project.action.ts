@@ -36,7 +36,7 @@ export async function fetchStorageLocationsAction(token: string | null) {
 export async function createProjectAction(name: string, storageLocation: string, token: string | null = null) {
   try {
     const cookieHeaders = await getCookieHeader();
-    const res = await fetch("http://20.215.236.82/api/project", {
+    const res = await fetch(`${BACKEND_URL}/api/project`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -61,7 +61,7 @@ export async function createProjectAction(name: string, storageLocation: string,
 export async function createFolderAction(name: string, projectId: string, token: string | null = null) {
   try {
     const cookieHeaders = await getCookieHeader();
-    const res = await fetch("http://20.215.236.82/api/folder", {
+    const res = await fetch(`${BACKEND_URL}/api/folder`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -86,7 +86,7 @@ export async function createFolderAction(name: string, projectId: string, token:
 export async function registerFileAction(payload: any, token: string | null = null) {
   try {
     const cookieHeaders = await getCookieHeader();
-    const res = await fetch("http://20.215.236.82/api/file", {
+    const res = await fetch(`${BACKEND_URL}/api/file`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -123,7 +123,7 @@ export async function registerFileAction(payload: any, token: string | null = nu
 export async function confirmFileUploadAction(fileId: string, payload: any = {}, token: string | null = null) {
   try {
     const cookieHeaders = await getCookieHeader();
-    const res = await fetch(`http://20.215.236.82/api/file/${fileId}/upload_status`, {
+    const res = await fetch(`${BACKEND_URL}/api/file/${fileId}/upload_status`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -157,7 +157,7 @@ export async function confirmFileUploadAction(fileId: string, payload: any = {},
 export async function analyzeFileAction(fileId: string, token: string | null = null) {
   try {
     const cookieHeaders = await getCookieHeader();
-    const res = await fetch(`http://20.215.236.82/api/file/${fileId}/analyze`, {
+    const res = await fetch(`${BACKEND_URL}/api/file/${fileId}/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -212,7 +212,7 @@ export async function analyzeFileAction(fileId: string, token: string | null = n
 export async function fetchProjectsAction(token: string | null = null) {
   try {
     const cookieHeaders = await getCookieHeader();
-    const res = await fetch("http://20.215.236.82/api/project", {
+    const res = await fetch(`${BACKEND_URL}/api/project`, {
       headers: {
         ...(token ? { "Authorization": `Bearer ${token}` } : {}),
         ...cookieHeaders,
@@ -232,7 +232,7 @@ export async function fetchProjectResourcesAction(projectId: string, parentId: s
   try {
     const cookieHeaders = await getCookieHeader();
     const query = parentId ? `?parent_id=${parentId}` : "";
-    const res = await fetch(`http://20.215.236.82/api/project/${projectId}/resources${query}`, {
+    const res = await fetch(`${BACKEND_URL}/api/project/${projectId}/resources${query}`, {
       headers: {
         ...(token ? { "Authorization": `Bearer ${token}` } : {}),
         ...cookieHeaders,
