@@ -2477,6 +2477,7 @@ import { analyzeFileAction, fetchProjectResourcesAction } from "@/lib/actions/pr
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchStorageLocations, createProject, createFolder } from "@/redux/slices/projectSlice";
 import { uploadFileToApi } from "@/lib/file";
+import { showToast } from "@/components/ui/toast";
 
 interface Message {
   role: "user" | "ai";
@@ -2560,6 +2561,7 @@ function WorkspaceContent() {
 
   const [isCreateFolderOpen, setIsCreateFolderOpen] = React.useState(false);
   const [newFolderNameInput, setNewFolderNameInput] = React.useState("");
+  const hasPromptedFolderRef = React.useRef(false);
 
   // Prerequisite flow states
   const [createdProjectId, setCreatedProjectId] = React.useState<string | null>(() => {
@@ -2604,6 +2606,12 @@ function WorkspaceContent() {
       if (res.success) {
         const list = res.data?.data || res.data || [];
         setProjectResources(list);
+
+        const hasFolder = list.some((r: any) => r.type === "folder");
+        if (!hasFolder && !hasPromptedFolderRef.current) {
+          hasPromptedFolderRef.current = true;
+          setIsCreateFolderOpen(true);
+        }
       }
     } catch (err) {
       console.error("Failed to load project resources:", err);
@@ -2613,6 +2621,10 @@ function WorkspaceContent() {
   React.useEffect(() => {
     loadProjectResources();
   }, [loadProjectResources]);
+
+  React.useEffect(() => {
+    hasPromptedFolderRef.current = false;
+  }, [createdProjectId]);
 
   React.useEffect(() => {
     if (createdProjectName && notebookTitle === "Untitled") {
@@ -2631,7 +2643,7 @@ function WorkspaceContent() {
     try {
       const resultAction = await dispatch(createProject({ name: projectName, storageLocation: selectedLocation }));
       if (createProject.fulfilled.match(resultAction)) {
-        alert(`Project "${projectName}" created successfully!`);
+        showToast("Project Created", `Project "${projectName}" created successfully!`, "success");
         const payloadData = resultAction.payload as any;
         const projId = payloadData?.data?.id;
         if (projId) {
@@ -2643,10 +2655,10 @@ function WorkspaceContent() {
         setIsCreateProjectOpen(false);
         setProjectName("");
       } else {
-        alert(resultAction.payload || "Failed to create project");
+        showToast("Failed to Create Project", (resultAction.payload as any) || "Failed to create project", "error");
       }
     } catch (err: any) {
-      alert(err.message || "Failed to create project");
+      showToast("Error", err.message || "Failed to create project", "error");
     }
   };
 
@@ -2655,7 +2667,7 @@ function WorkspaceContent() {
     try {
       const resultAction = await dispatch(createFolder({ name: newFolderNameInput, projectId: createdProjectId }));
       if (createFolder.fulfilled.match(resultAction)) {
-        alert(`Folder "${newFolderNameInput}" created successfully!`);
+        showToast("Folder Created", `Folder "${newFolderNameInput}" created successfully!`, "success");
         const payloadData = resultAction.payload as any;
         const foldId = extractFolderId(payloadData);
         const finalFoldId = foldId || "created-folder";
@@ -2665,10 +2677,10 @@ function WorkspaceContent() {
         setNewFolderNameInput("");
         loadProjectResources();
       } else {
-        alert(resultAction.payload || "Failed to create folder");
+        showToast("Failed to Create Folder", (resultAction.payload as any) || "Failed to create folder", "error");
       }
     } catch (err: any) {
-      alert(err.message || "Failed to create folder");
+      showToast("Error", err.message || "Failed to create folder", "error");
     }
   };
 
@@ -2677,7 +2689,7 @@ function WorkspaceContent() {
     try {
       const resultAction = await dispatch(createProject({ name: newProjectName, storageLocation: selectedLocation }));
       if (createProject.fulfilled.match(resultAction)) {
-        alert(`Project "${newProjectName}" created successfully!`);
+        showToast("Project Created", `Project "${newProjectName}" created successfully!`, "success");
         const payloadData = resultAction.payload as any;
         const projId = payloadData?.data?.id;
         if (projId) {
@@ -2687,13 +2699,13 @@ function WorkspaceContent() {
           localStorage.setItem("createdProjectName", newProjectName);
           setPrerequisiteStep("folder");
         } else {
-          alert("Project created, but ID not received");
+          showToast("Error", "Project created, but ID not received", "error");
         }
       } else {
-        alert(resultAction.payload || "Failed to create project");
+        showToast("Failed to Create Project", (resultAction.payload as any) || "Failed to create project", "error");
       }
     } catch (err: any) {
-      alert(err.message || "Failed to create project");
+      showToast("Error", err.message || "Failed to create project", "error");
     }
   };
 
@@ -2702,7 +2714,7 @@ function WorkspaceContent() {
     try {
       const resultAction = await dispatch(createFolder({ name: newFolderName, projectId: createdProjectId }));
       if (createFolder.fulfilled.match(resultAction)) {
-        alert(`Folder "${newFolderName}" created successfully!`);
+        showToast("Folder Created", `Folder "${newFolderName}" created successfully!`, "success");
         const payloadData = resultAction.payload as any;
         const foldId = extractFolderId(payloadData);
         const finalFoldId = foldId || "created-folder";
@@ -2714,10 +2726,10 @@ function WorkspaceContent() {
           await proceedUpload(pendingUploadFile, createdProjectId, finalFoldId);
         }
       } else {
-        alert(resultAction.payload || "Failed to create folder");
+        showToast("Failed to Create Folder", (resultAction.payload as any) || "Failed to create folder", "error");
       }
     } catch (err: any) {
-      alert(err.message || "Failed to create folder");
+      showToast("Error", err.message || "Failed to create folder", "error");
     }
   };
 
@@ -2731,7 +2743,6 @@ function WorkspaceContent() {
       const result = await uploadFileToApi(file, activeProjId, activeFoldId, token);
       if (!result.success) {
         triggerBanner(result.error || "Upload failed.", "err");
-        alert("Upload failed: " + (result.error || "unknown error"));
         return;
       }
       const fileData = result.data;
@@ -2777,7 +2788,6 @@ function WorkspaceContent() {
       loadProjectResources();
     } catch (err: any) {
       triggerBanner("Upload error: " + err.message, "err");
-      alert("Upload error: " + err.message);
     }
   };
   const [saveStatus, setSaveStatus] = React.useState("All changes saved");
@@ -3261,6 +3271,7 @@ function WorkspaceContent() {
   const saveNotebook = async () => {
     setSaveStatus("Saving…");
     const snapshot = {
+      project_id: createdProjectId,
       notebook_id: notebookId,
       vault_file_id: currentVaultFileId,
       title: notebookTitle,
@@ -3397,6 +3408,11 @@ function WorkspaceContent() {
 
   // Init
   React.useEffect(() => {
+    const toastProj = localStorage.getItem("showProjectCreatedToast");
+    if (toastProj) {
+      showToast("Project Created", `Project "${toastProj}" created successfully!`, "success");
+      localStorage.removeItem("showProjectCreatedToast");
+    }
     if (searchParams.get("new") === "true") {
       setSession({ active: false, filename: "", dfName: "", columns: [], dtypes: {}, rowCount: 0 });
       setMessages([]);
@@ -3414,9 +3430,19 @@ function WorkspaceContent() {
       setRightSidebarOpen(true);
     } else {
       const raw = localStorage.getItem("dn_current_notebook");
+      let restored = false;
       if (raw) {
-        restoreFromLocal();
-      } else {
+        try {
+          const snap = JSON.parse(raw);
+          const currentProjId = localStorage.getItem("createdProjectId");
+          if (!snap.project_id || snap.project_id === currentProjId) {
+            restoreFromLocal();
+            restored = true;
+          }
+        } catch (_) {}
+      }
+
+      if (!restored) {
         setSession({ active: false, filename: "", dfName: "", columns: [], dtypes: {}, rowCount: 0 });
         setMessages([]);
         setCells([]);
@@ -3459,11 +3485,13 @@ function WorkspaceContent() {
 
       {/* ── Topbar ── */}
       <Topbar
+        projectName={createdProjectName}
         notebookTitle={notebookTitle}
         setNotebookTitle={setNotebookTitle}
         saveStatus={saveStatus}
         saveNotebook={saveNotebook}
         onRunAll={runAllCells}
+        isDatasetLoaded={!!currentVaultFileId || session.active}
       />
 
       {/* ── Banner ── */}

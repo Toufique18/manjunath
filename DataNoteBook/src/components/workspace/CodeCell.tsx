@@ -322,7 +322,10 @@ export default function CodeCell({
               {/* Syntax-highlighted overlay (behind/underneath the textarea) */}
               <pre className="absolute inset-0 font-mono text-[12.5px] leading-5 pl-3 pr-3 pt-[3px] pb-3 pointer-events-none select-none whitespace-pre-wrap break-words overflow-hidden">
                 {lines.map((line, i) => (
-                  <div key={i} className="h-5">{tokenizeLine(line)}</div>
+                  <React.Fragment key={i}>
+                    {i > 0 && "\n"}
+                    {tokenizeLine(line)}
+                  </React.Fragment>
                 ))}
               </pre>
             </div>

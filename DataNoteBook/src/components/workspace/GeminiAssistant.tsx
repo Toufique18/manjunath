@@ -1821,6 +1821,37 @@ export default function GeminiAssistant({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const taRef = React.useRef<HTMLTextAreaElement>(null);
 
+  // Sidebar resizing state
+  const [geminiWidth, setGeminiWidth] = React.useState(350);
+  const [previewWidth, setPreviewWidth] = React.useState(600);
+
+  const currentWidth = activeTab === "preview" ? previewWidth : geminiWidth;
+  const setCurrentWidth = activeTab === "preview" ? setPreviewWidth : setGeminiWidth;
+
+  const isResizing = React.useRef(false);
+
+  const startResizing = React.useCallback((mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault();
+    isResizing.current = true;
+
+    const handleMouseMove = (mouseMoveEvent: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = window.innerWidth - mouseMoveEvent.clientX;
+      if (newWidth > 250 && newWidth < window.innerWidth * 0.85) {
+        setCurrentWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, [setCurrentWidth]);
+
   // Preview data state
   const [previewData, setPreviewData] = React.useState<{
     columns: string[];
@@ -1948,9 +1979,17 @@ export default function GeminiAssistant({
   }, [activeTab, sessionActive, previewPage, loadPreview]);
 
   return (
-    <aside className={`bg-[#0A1628] border-l border-slate-900/80 flex flex-col overflow-hidden flex-shrink-0 z-30 transition-all duration-300 ${
-      activeTab === "preview" ? "w-[550px]" : "w-[300px]"
-    }`}>
+    <aside
+      style={{ width: `${currentWidth}px` }}
+      className="bg-[#0A1628] border-l-3 border-black flex flex-col overflow-hidden flex-shrink-0 z-30 relative"
+    >
+      {/* Resizer Handle */}
+      <div
+        onMouseDown={startResizing}
+        className="absolute top-0 left-0 w-1.5 h-full cursor-col-resize hover:bg-emerald-500/30 active:bg-emerald-500/60 transition-colors z-50 flex items-center justify-center group"
+      >
+        <div className="w-[1px] h-8 bg-slate-800/60 group-hover:bg-emerald-400 group-active:bg-emerald-400 transition-colors" />
+      </div>
       {/* ── Header ── */}
       <div className="h-11 border-b border-slate-900/80 flex items-center justify-between px-3 flex-shrink-0">
         <div className="flex items-center gap-2">

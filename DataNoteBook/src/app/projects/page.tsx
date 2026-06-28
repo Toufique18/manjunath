@@ -36,6 +36,7 @@ import ActivityBar from "@/components/workspace/ActivityBar";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchStorageLocations, createProject } from "@/redux/slices/projectSlice";
 import { fetchProjectsAction } from "@/lib/actions/project.action";
+import { showToast } from "@/components/ui/toast";
 
 interface Project {
   id: string;
@@ -106,19 +107,34 @@ export default function ProjectsPage() {
     try {
       const resultAction = await dispatch(createProject({ name: projectName, storageLocation: selectedLocation }));
       if (createProject.fulfilled.match(resultAction)) {
-        alert(`Project "${projectName}" created successfully!`);
         setIsCreateProjectOpen(false);
-        setProjectName("");
-        loadProjects();
+        const payloadData = resultAction.payload as any;
+        const projId = payloadData?.data?.id;
+        if (projId) {
+          localStorage.setItem("createdProjectId", projId);
+          localStorage.setItem("createdProjectName", projectName);
+          localStorage.setItem("showProjectCreatedToast", projectName);
+          localStorage.removeItem("createdFolderId");
+          localStorage.removeItem("dn_current_notebook");
+          router.push("/");
+        } else {
+          setProjectName("");
+          loadProjects();
+          showToast("Project Created", `Project "${projectName}" created successfully!`, "success");
+        }
       } else {
-        alert(resultAction.payload || "Failed to create project");
+        showToast("Failed to Create Project", (resultAction.payload as any) || "Failed to create project", "error");
       }
     } catch (err: any) {
-      alert(err.message || "Failed to create project");
+      showToast("Error", err.message || "Failed to create project", "error");
     }
   };
 
   const handleSelectProject = (projectId: string, projectName: string) => {
+    const prevProjId = localStorage.getItem("createdProjectId");
+    if (prevProjId !== projectId) {
+      localStorage.removeItem("dn_current_notebook");
+    }
     localStorage.setItem("createdProjectId", projectId);
     localStorage.setItem("createdProjectName", projectName);
     localStorage.removeItem("createdFolderId");

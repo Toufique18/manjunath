@@ -318,7 +318,7 @@ export default function TableOfContents({
   };
 
   return (
-    <aside className="w-56 bg-[#0A1628] border-r border-[#00081A] flex flex-col overflow-hidden flex-shrink-0 z-30">
+    <aside className="w-56 bg-[#0A1628] border-r-3 border-[#00081A] flex flex-col overflow-hidden flex-shrink-0 z-30">
 
       {/* ── Header ── */}
       <div className="h-11 flex items-center justify-between px-3 border-b border-[#00081A] flex-shrink-0">

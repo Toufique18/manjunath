@@ -104,3 +104,9 @@ export default function GSAPToast({
     </div>
   );
 }
+
+export const showToast = (title: string, message: string, type: ToastType = "success") => {
+  toast.custom((t) => (
+    <GSAPToast t={t} title={title} message={message} type={type} />
+  ));
+};
