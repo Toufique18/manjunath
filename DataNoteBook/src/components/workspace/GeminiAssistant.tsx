@@ -3000,7 +3000,7 @@ export default function GeminiAssistant({
                   >
                     <ImageIcon className="h-3.5 w-3.5" />
                   </button> */}
-                  {/* {sessionActive && (
+                  {sessionActive && (
                     <button
                       onClick={handleDownloadCleaned}
                       disabled={downloading}
@@ -3013,7 +3013,7 @@ export default function GeminiAssistant({
                         <Download className="h-3.5 w-3.5" />
                       )}
                     </button>
-                  )} */}
+                  )}
                 </div>
                 <button
                   disabled={chatLoading || (!chatInput.trim() && !attachedImage)}
