@@ -3945,7 +3945,7 @@ import GeminiAssistant from "@/components/workspace/GeminiAssistant";
 import CodeCell from "@/components/workspace/CodeCell";
 import TextCell from "@/components/workspace/TextCell";
 import LoginForm from "@/components/auth/LoginForm";
-import { sendChatAction } from "@/lib/actions/ai.action";
+import { sendChatAction, reloadDatasetToExecutorAction } from "@/lib/actions/ai.action";
 import { analyzeFileAction, fetchProjectResourcesAction } from "@/lib/actions/project.action";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchStorageLocations, createProject, createFolder } from "@/redux/slices/projectSlice";
@@ -4493,8 +4493,37 @@ function WorkspaceContent() {
         // Fallback: if session not found, try to locate it in projectResources and analyze it
         const fileObj = projectResources.find(r => r.type === "file" && r.name === filename);
         if (fileObj) {
-          triggerBanner(`Analyzing dataset ${filename}…`);
+          triggerBanner(`Loading ${filename} into executor…`);
           const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+          const reloadResult = await reloadDatasetToExecutorAction(fileObj.id, filename, token);
+          
+          if (reloadResult.ok) {
+            // Try selecting it again now that it is loaded into the executor
+            const retryRes = await fetch("/api/upload/select", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filename }),
+              credentials: "include",
+            });
+            if (retryRes.ok) {
+              const retryData = await retryRes.json();
+              setSession({
+                active: true,
+                filename: retryData.filename,
+                dfName: inferDfName(retryData.filename),
+                columns: retryData.columns || [],
+                dtypes: retryData.dtypes || {},
+                rowCount: retryData.row_count || 0,
+              });
+              triggerBanner(`✓ Switched to dataset: ${retryData.filename}`, "ok");
+              setRightSidebarOpen(true);
+              setShowPreviewTab(true);
+              setActiveTab("preview");
+              return;
+            }
+          }
+          
+          triggerBanner(`Analyzing dataset ${filename}…`);
           const analyzeResult = await analyzeFileAction(fileObj.id, token);
           if (analyzeResult.success) {
             const analysisData = analyzeResult.data?.data;
@@ -4513,8 +4542,21 @@ function WorkspaceContent() {
             setActiveTab("preview");
             return;
           } else {
+            // If even analyze fails, set a basic session as a graceful fallback so the user is not completely blocked
             console.error("analyzeFileAction failed:", analyzeResult.error);
-            triggerBanner(`Analysis failed: ${analyzeResult.error}`, "err");
+            triggerBanner(`⚠️ Analysis failed: ${analyzeResult.error}. Using basic session.`, "err");
+            setSession({
+              active: true,
+              filename: fileObj.name,
+              dfName: inferDfName(fileObj.name),
+              columns: [],
+              dtypes: {},
+              rowCount: 0,
+            });
+            setUploadedFiles((prev) => Array.from(new Set([...prev, fileObj.name])));
+            setRightSidebarOpen(true);
+            setShowPreviewTab(true);
+            setActiveTab("preview");
             return;
           }
         }
