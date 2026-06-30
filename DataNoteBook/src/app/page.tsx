@@ -4244,6 +4244,12 @@ function WorkspaceContent() {
         }
       }
 
+      // Store the session_id if returned
+      const returnedSessionId = analyzeResult.data?.data?.session_id || analyzeResult.data?.session_id;
+      if (returnedSessionId) {
+        localStorage.setItem("session_id", returnedSessionId);
+      }
+
       // Initialize notebook details associated with the uploaded file ID
       setCurrentVaultFileId(fileId);
       setNotebookId(null);
@@ -4482,9 +4488,13 @@ function WorkspaceContent() {
 
     triggerBanner(`Loading dataset ${filename}…`);
     try {
+      const storedSessionId = typeof window !== "undefined" ? localStorage.getItem("session_id") : null;
       const res = await fetch("/api/upload/select", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(storedSessionId ? { "x-session-id": storedSessionId } : {}),
+        },
         body: JSON.stringify({ filename }),
         credentials: "include",
       });
@@ -4495,7 +4505,8 @@ function WorkspaceContent() {
         if (fileObj) {
           triggerBanner(`Loading ${filename} into executor…`);
           const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-          const reloadResult = await reloadDatasetToExecutorAction(fileObj.id, filename, token);
+          const sessionId = typeof window !== "undefined" ? localStorage.getItem("session_id") : null;
+          const reloadResult = await reloadDatasetToExecutorAction(fileObj.id, filename, token, sessionId);
           
           if (reloadResult.ok) {
             // Try selecting it again now that it is loaded into the executor
@@ -4507,6 +4518,9 @@ function WorkspaceContent() {
             });
             if (retryRes.ok) {
               const retryData = await retryRes.json();
+              if (retryData.session_id) {
+                localStorage.setItem("session_id", retryData.session_id);
+              }
               setSession({
                 active: true,
                 filename: retryData.filename,
@@ -4527,6 +4541,9 @@ function WorkspaceContent() {
           const analyzeResult = await analyzeFileAction(fileObj.id, token);
           if (analyzeResult.success) {
             const analysisData = analyzeResult.data?.data;
+            if (analysisData?.session_id) {
+              localStorage.setItem("session_id", analysisData.session_id);
+            }
             setSession({
               active: true,
               filename: fileObj.name,
@@ -4562,6 +4579,9 @@ function WorkspaceContent() {
         }
         triggerBanner(data.detail || "Selection failed.", "err");
         return;
+      }
+      if (data.session_id) {
+        localStorage.setItem("session_id", data.session_id);
       }
       setSession({
         active: true,
@@ -4630,9 +4650,13 @@ function WorkspaceContent() {
     };
 
     try {
+      const sessionId = typeof window !== "undefined" ? localStorage.getItem("session_id") : null;
       const res = await fetch("/api/execute/stream", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(sessionId ? { "x-session-id": sessionId } : {})
+        },
         credentials: "include",
         body: JSON.stringify({ code }),
       });
@@ -4685,6 +4709,32 @@ function WorkspaceContent() {
       loadProjectResources();
       setTimeout(() => loadProjectResources(), 1000);
       setTimeout(() => loadProjectResources(), 3000);
+
+      // Sync active file state after cell execution
+      try {
+        const sessionId = typeof window !== "undefined" ? localStorage.getItem("session_id") : null;
+        const sessionRes = await fetch("/api/session", {
+          headers: {
+            ...(sessionId ? { "x-session-id": sessionId } : {})
+          }
+        });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (sessionData.active && sessionData.vault_file_id) {
+            setCurrentVaultFileId(sessionData.vault_file_id);
+            setSession({
+              active: true,
+              filename: sessionData.filename,
+              dfName: inferDfName(sessionData.filename),
+              columns: sessionData.columns || [],
+              dtypes: sessionData.dtypes || {},
+              rowCount: sessionData.row_count || 0,
+            });
+          }
+        }
+      } catch (sessionErr) {
+        console.error("Error syncing session after cell run:", sessionErr);
+      }
     }
   };
 
@@ -4699,7 +4749,8 @@ function WorkspaceContent() {
     setPendingCode(null);
     setMessages((prev) => [...prev, { role: "user", text, image }]);
     try {
-      const res = await sendChatAction(text, image);
+      const sessionId = typeof window !== "undefined" ? localStorage.getItem("session_id") : null;
+      const res = await sendChatAction(text, image, sessionId);
       if (res.status === 401 || res.status === 404) {
         triggerBanner("Session expired — please re-upload your dataset", "err");
         setSession({ active: false, filename: "", dfName: "", columns: [], dtypes: {}, rowCount: 0 });
@@ -4810,7 +4861,7 @@ function WorkspaceContent() {
       localStorage.setItem(`dn_notebook_${currentVaultFileId}`, JSON.stringify(snapshot));
     }
     
-    /* Commented out server-side save for production compatibility:
+    //Commented out server-side save for production compatibility:
     try {
       const res = await fetch("/api/notebooks/save", {
         method: "POST",
@@ -4840,7 +4891,7 @@ function WorkspaceContent() {
     } catch (err) {
       console.warn("Failed to save notebook to backend:", err);
     }
-    */
+    
 
     const hhmm = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     setSaveStatus(`✓ Saved locally ${hhmm}`);

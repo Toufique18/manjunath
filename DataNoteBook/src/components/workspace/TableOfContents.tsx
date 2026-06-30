@@ -529,6 +529,32 @@ export default function TableOfContents({
   const [expandedFolders, setExpandedFolders] = React.useState<Record<string, boolean>>({});
   const [uploadTargetFolderId, setUploadTargetFolderId] = React.useState<string | null>(null);
 
+  // Sidebar resizing state
+  const [tocWidth, setTocWidth] = React.useState(224);
+  const isResizing = React.useRef(false);
+
+  const startResizing = React.useCallback((mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault();
+    isResizing.current = true;
+
+    const handleMouseMove = (mouseMoveEvent: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = mouseMoveEvent.clientX;
+      if (newWidth > 180 && newWidth < 450) {
+        setTocWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, []);
+
   React.useEffect(() => {
     if (selectedFolderId) {
       setExpandedFolders(prev => ({
@@ -617,7 +643,17 @@ export default function TableOfContents({
   };
 
   return (
-    <aside className="w-56 bg-[#0A1628] border-r-3 border-[#00081A] flex flex-col overflow-hidden flex-shrink-0 z-30">
+    <aside 
+      style={{ width: `${tocWidth}px` }} 
+      className="bg-[#0A1628] border-r-3 border-[#00081A] flex flex-col overflow-hidden flex-shrink-0 z-30 relative"
+    >
+      {/* Resizer Handle */}
+      <div
+        onMouseDown={startResizing}
+        className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-emerald-500/30 active:bg-emerald-500/60 transition-colors z-50 flex items-center justify-center group"
+      >
+        <div className="w-[1px] h-8 bg-slate-800/60 group-hover:bg-emerald-400 group-active:bg-emerald-400 transition-colors" />
+      </div>
 
       {/* ── Header ── */}
       <div className="h-11 flex items-center justify-between px-3 border-b border-[#00081A] flex-shrink-0">
