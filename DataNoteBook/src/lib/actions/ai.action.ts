@@ -35,7 +35,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
 //     }
 // }
 
-export async function sendChatAction(text: string, image: string | null = null) {
+export async function sendChatAction(text: string, image: string | null = null, sessionId: string | null = null) {
     try {
         const cookieStore = await cookies();
         const cookieHeader = cookieStore.toString();
@@ -45,6 +45,7 @@ export async function sendChatAction(text: string, image: string | null = null) 
             headers: {
                 "Content-Type": "application/json",
                 ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+                ...(sessionId ? { "x-session-id": sessionId } : {}),
             },
             body: JSON.stringify({ message: text, image: image }),
         });
@@ -71,7 +72,7 @@ export async function sendChatAction(text: string, image: string | null = null) 
  * Tells the backend executor to load the named file as `df`.
  * Must run server-side so it carries the session_id cookie set by analyzeFileAction.
  */
-export async function selectDatasetAction(filename: string) {
+export async function selectDatasetAction(filename: string, sessionId: string | null = null) {
     try {
         const cookieStore = await cookies();
         const cookieHeader = cookieStore.toString();
@@ -81,6 +82,7 @@ export async function selectDatasetAction(filename: string) {
             headers: {
                 "Content-Type": "application/json",
                 ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+                ...(sessionId ? { "x-session-id": sessionId } : {}),
             },
             body: JSON.stringify({ filename }),
         });
@@ -111,7 +113,7 @@ export async function selectDatasetAction(filename: string) {
  * Executes Python code on the backend executor using the server-side session cookie.
  * Returns the full stdout/stderr as a string (non-streaming fallback).
  */
-export async function executeCodeAction(code: string) {
+export async function executeCodeAction(code: string, sessionId: string | null = null) {
     try {
         const cookieStore = await cookies();
         const cookieHeader = cookieStore.toString();
@@ -121,6 +123,7 @@ export async function executeCodeAction(code: string) {
             headers: {
                 "Content-Type": "application/json",
                 ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+                ...(sessionId ? { "x-session-id": sessionId } : {}),
             },
             body: JSON.stringify({ code }),
         });
@@ -138,7 +141,7 @@ export async function executeCodeAction(code: string) {
  * This fixes "Session Expired" when the cookie was set by analyzeFileAction
  * (server-side) but the browser never received it before calling preview.
  */
-export async function loadPreviewAction(page: number, pageSize: number) {
+export async function loadPreviewAction(page: number, pageSize: number, sessionId: string | null = null) {
     try {
         const cookieStore = await cookies();
         const cookieHeader = cookieStore.toString();
@@ -148,6 +151,7 @@ export async function loadPreviewAction(page: number, pageSize: number) {
             {
                 headers: {
                     ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+                    ...(sessionId ? { "x-session-id": sessionId } : {}),
                 },
             }
         );
@@ -170,7 +174,7 @@ export async function loadPreviewAction(page: number, pageSize: number) {
  * This is required for existing files selected from the sidebar — they live in
  * Azure Blob Storage and have never been sent to the executor's uploads dir.
  */
-export async function reloadDatasetToExecutorAction(fileId: string, filename: string, token: string | null) {
+export async function reloadDatasetToExecutorAction(fileId: string, filename: string, token: string | null, sessionId: string | null = null) {
     try {
         const cookieStore = await cookies();
         const cookieHeader = cookieStore.toString();
@@ -180,6 +184,7 @@ export async function reloadDatasetToExecutorAction(fileId: string, filename: st
             headers: {
                 ...(cookieHeader ? { Cookie: cookieHeader } : {}),
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(sessionId ? { "x-session-id": sessionId } : {}),
             },
         });
 
@@ -220,6 +225,7 @@ export async function reloadDatasetToExecutorAction(fileId: string, filename: st
             method: "POST",
             headers: {
                 ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+                ...(sessionId ? { "x-session-id": sessionId } : {}),
             },
             body: form,
         });

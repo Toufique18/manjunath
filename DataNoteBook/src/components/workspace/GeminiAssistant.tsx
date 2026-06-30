@@ -2602,10 +2602,12 @@ export default function GeminiAssistant({
     setDownloading(true);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const sessionId = typeof window !== "undefined" ? localStorage.getItem("session_id") : null;
       const res = await fetch("/api/upload/download", {
         method: "POST",
         headers: {
           ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          ...(sessionId ? { "x-session-id": sessionId } : {}),
         },
         credentials: "include",
       });
@@ -2632,7 +2634,13 @@ export default function GeminiAssistant({
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      triggerBanner("Cleaned dataset downloaded successfully and saved to Azure Vault", "ok");
+      
+      triggerBanner("Cleaned dataset downloaded. Saving to Azure Vault...", "ok");
+      
+      // Convert blob to File and upload directly from the frontend to Azure
+      const file = new File([blob], downloadFilename, { type: "text/csv" });
+      await handleUpload(file, true);
+      
       if (onRefreshResources) {
         onRefreshResources();
       }
@@ -2667,7 +2675,11 @@ export default function GeminiAssistant({
     setPreviewError(null);
     setPreviewSessionExpired(false);
     try {
+      const sessionId = typeof window !== "undefined" ? localStorage.getItem("session_id") : null;
       const res = await fetch(`/api/upload/preview?page=${page}&page_size=${pageSize}`, {
+        headers: {
+          ...(sessionId ? { "x-session-id": sessionId } : {})
+        },
         credentials: "include",
       });
       if (!res.ok) {
